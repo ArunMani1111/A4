@@ -35,7 +35,7 @@ class Segmentation:
         self.error = 0
 
         print(
-            f'Image dimensions : {self.image_array.shape}\nNumber of seeds : K={self.K}')
+            f'Image dimensions : {self.image_array.shape}\nNo. of seeds : K={self.K}')
         print(f'seeds {self.seeds_dic}')
 
         # output directory
@@ -45,8 +45,8 @@ class Segmentation:
             except Exception as e:
                 print(e)
 
-    # Saver
 
+    # Saver
     def save_object(self):
         file_path = os.path.join(
             OUTPUT_PATH, f'{self.segmenation_name}.pickle')
@@ -54,7 +54,7 @@ class Segmentation:
         with open(file_path, 'wb') as pickle_file:
             pickle.dump(self, pickle_file)
 
-    def save_segmentation_image(self):
+    def save_seg_img(self):
         file_path = os.path.join(
             OUTPUT_PATH, f'{self.image_name}_segmentation.pickle')
         print(f'Saving segmentation image to {file_path}')
@@ -62,7 +62,8 @@ class Segmentation:
             pickle.dump(self.segmentation_image, pickle_file)
 
 
-    # Mathematical solving steps
+            
+    # Mathematical solvers
     def build_weighted_graph(self):
         for y, x in itertools.product(range(self.ny), range(self.nx)):
             neighbours = get_neighbour_pixels(x, y, self.nx, self.ny)
@@ -87,7 +88,7 @@ class Segmentation:
         print('solving linear systems')
         unseeded_potentials_list = []
         for seed_index in range(self.K):
-            print(f'Solving system {seed_index+1} out of {self.K}')
+            print(f'Solving system {seed_index+1} / {self.K}')
             seeds_vector = [0] * self.K
             seeds_vector[seed_index] = 1
             unseeded_potentials = scipy.sparse.linalg.spsolve(
@@ -96,7 +97,7 @@ class Segmentation:
         return unseeded_potentials_list
 
     def assign_max_likelihood(self, unseeded_potentials_list):
-        print('Assigning maximum likelihood seed')
+        print('Assigning max. likelihood seed')
         for pixel_index in range(self.K, self.pixel_number):
             pixel_coords = self.ordered_nodes[pixel_index]
             pixel_probabilities = [potentials[pixel_index - self.K]
@@ -116,8 +117,9 @@ class Segmentation:
         return self.pixel_colour_dic
 
 
-    # Output methods
-    def build_segmentation_image(self):
+    
+    # Output methods:
+    def build_seg_image(self):
         image = np.zeros((self.ny, self.nx, 3))
         for i in range(self.ny):
             for j in range(self.nx):
@@ -125,7 +127,7 @@ class Segmentation:
         self.segmentation_image = image
         return image
 
-    def draw_contours(self):
+    def draw_cont(self):
         contours_array = np.zeros((self.ny, self.nx, 4))
         for y, x in itertools.product(range(self.ny), range(self.nx)):
             colour = self.pixel_colour_dic[(x, y)]
@@ -140,7 +142,7 @@ class Segmentation:
     def plot_contours(self):
         if not self.solved:
             raise Exception('Impossible to plot segmentation before solving')
-        self.draw_contours()
+        self.draw_cont()
         plt.imshow(self.image_array, cmap='gray')
         plt.imshow(self.contours_array)
         plt.title(r'$\beta=$'+str(round(self.beta, 3)))
@@ -149,7 +151,7 @@ class Segmentation:
     def plot_colours(self):
         if not self.solved:
             raise Exception('Impossible to plot segmentation before solving')
-        self.build_segmentation_image()
+        self.build_seg_image()
         plt.title(r'$\beta=$'+str(round(self.beta, 3)))
         plt.imshow(self.segmentation_image)
         for seed in self.seeds_dic.keys():
@@ -158,7 +160,7 @@ class Segmentation:
         plt.show()
 
     def segmentation_to_png(self, path=None):
-        self.build_segmentation_image()
+        self.build_seg_image()
         output_path = self.output_path
         if path:
             output_path = path
@@ -173,7 +175,7 @@ class Segmentation:
         plt.savefig(output_path)
 
     def contours_to_png(self, path=None):
-        self.draw_contours()
+        self.draw_cont()
         output_path = self.output_path
         if path:
             output_path = path
@@ -200,6 +202,7 @@ class Segmentation:
         print(f'Saving seeds image to {output_path}')
         plt.savefig(output_path)
 
+        
     # Ground of truth and error
     def compute_error(self, path=None):
         reference = self.reference
@@ -219,7 +222,7 @@ class Segmentation:
         self.reference = reference_image
 
 
-    # Add noise
+    # Adding noise
     def add_noise(self, mean, std):
         noisy_image = self.image_array + \
             np.random.normal(mean, std, self.image_array.shape)

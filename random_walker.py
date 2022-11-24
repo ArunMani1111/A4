@@ -21,10 +21,10 @@ def interface():
     root = Tk()
     frame = Frame(root)
 
-    # Choose an image
+    # Choose image
     image_path = askopenfilename(parent=root, title='Select an image.')
     image_name = os.path.splitext(os.path.basename(image_path))[0]
-    print(f'opening image {image_path}')
+    print(f'Opening image {image_path}')
     image = Image.open(image_path)
     width, height = image.size
     resized_image = image.resize((int(config.MAX_INTERFACE_HEIGHT*width/height), config.MAX_INTERFACE_HEIGHT))
@@ -50,14 +50,14 @@ def interface():
         root, text="Save segmentation", var=save_segmentation)
     save_segmentation_button.pack()
 
-    draw_contours = IntVar()
+    draw_cont = IntVar()
     draw_contours_button = Checkbutton(
-        root, text="Draw contours", var=draw_contours)
+        root, text="Draw contours", var=draw_cont)
     draw_contours_button.pack()
 
     # Button-called functions
 
-    def on_solve():
+    def solve_on():
         beta_parameter = float(beta_entry.get())
         segmentation = Segmentation(
             image_array, beta_parameter, seeds, image_name)
@@ -65,13 +65,13 @@ def interface():
         segmentation.solve()
 
         if save_segmentation.get():
-            segmentation.build_segmentation_image()
-            segmentation.save_segmentation_image()
+            segmentation.build_seg_image()
+            segmentation.save_seg_img()
 
-        if draw_contours.get():
+        if draw_cont.get():
             segmentation.plot_contours()
 
-        segmentation.build_segmentation_image()
+        segmentation.build_seg_image()
         segmentation.plot_colours()
 
     def save_seeds():
@@ -83,7 +83,7 @@ def interface():
 
     # Set buttons
     
-    solve_button = Button(root, text="Solve", command=on_solve)
+    solve_button = Button(root, text="Solve", command=solve_on)
     solve_button.pack()
 
     save_seeds_button = Button(root, text="Save seeds", command=save_seeds)
@@ -93,8 +93,8 @@ def interface():
 
     colours_list = Listbox(root)
     colours_list.pack()
-    for colour in config.COLOURS_DIC.keys():
-        colours_list.insert(END, colour)
+    for col in config.COLOURS_DIC.keys():
+        colours_list.insert(END, col)
 
     # Initialize variables
     seeds = OrderedDict()
@@ -104,7 +104,7 @@ def interface():
     # Interface operations
     def add_seed(event):
         if not CURRENT_COLOUR.get():
-            print('No colour selected !')
+            print('No colour selected!')
             return
         x, y = canvas_coords(event, canvas)
         seeds.update({
@@ -115,17 +115,17 @@ def interface():
         seed_ovals.append(last_seed)
         print(f'New {CURRENT_COLOUR.get()} seed added : {[x,y]}')
 
-    def remove_seed(event):
+    def rem_seed(event):
         seeds.pop(next(reversed(seeds)))
         canvas.delete(seed_ovals.pop(len(seed_ovals) - 1))
 
-    def select_colour(event):
+    def sel_col(event):
         CURRENT_COLOUR.set(colours_list.get(colours_list.curselection()))
         print(f'current colour = {CURRENT_COLOUR.get()}')
 
     canvas.bind("<ButtonPress-1>", add_seed)
-    canvas.bind("<ButtonPress-2>", remove_seed)
-    colours_list.bind("<<ListboxSelect>>", select_colour)
+    canvas.bind("<ButtonPress-2>", rem_seed)
+    colours_list.bind("<<ListboxSelect>>", sel_col)
     solve_button.bind
 
     root.mainloop()
