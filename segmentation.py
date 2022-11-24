@@ -35,7 +35,7 @@ class Segmentation:
         self.error = 0
 
         print(
-            f'Image dimensions : {self.image_array.shape}\nNo. of seeds : K={self.K}')
+            f'Image dimensions : {self.image_array.shape}\nNumber of seeds : K={self.K}')
         print(f'seeds {self.seeds_dic}')
 
         # output directory
@@ -50,14 +50,14 @@ class Segmentation:
     def save_object(self):
         file_path = os.path.join(
             OUTPUT_PATH, f'{self.segmenation_name}.pickle')
-        print(f'Saving segmentation object in {file_path}')
+        print(f'Saving segmentation object to {file_path}')
         with open(file_path, 'wb') as pickle_file:
             pickle.dump(self, pickle_file)
 
-    def save_seg_img(self):
+    def save_segmentation_image(self):
         file_path = os.path.join(
             OUTPUT_PATH, f'{self.image_name}_segmentation.pickle')
-        print(f'Saving segmentation image in {file_path}')
+        print(f'Saving segmentation image to {file_path}')
         with open(file_path, 'wb') as pickle_file:
             pickle.dump(self.segmentation_image, pickle_file)
 
@@ -66,30 +66,30 @@ class Segmentation:
     def build_weighted_graph(self):
         for y, x in itertools.product(range(self.ny), range(self.nx)):
             neighbours = get_neighbour_pixels(x, y, self.nx, self.ny)
-            for pix in neighbours:
-                g, h = self.image_array[y][x], self.image_array[pix[1]][pix[0]]
+            for pixel in neighbours:
+                g, h = self.image_array[y][x], self.image_array[pixel[1]][pixel[0]]
                 w = self.weight_function(float(g), float(h), self.beta)
-                self.graph.add_edge((x, y), pix, weight=w)
+                self.graph.add_edge((x, y), pixel, weight=w)
 
     def build_linear_algebra(self):
-        print('Building graph')
+        print('building graph')
         self.build_weighted_graph()
         self.ordered_nodes = get_ordered_nodelist(
             list(self.graph), list(self.seeds_dic.keys()))
-        print('Computing laplacian')
+        print('computing laplacian')
         self.laplacian = networkx.laplacian_matrix(
             self.graph, nodelist=self.ordered_nodes, weight='weight')
-        print('Extracting sub-matrices')
+        print('extracting sub-matrices')
         self.laplacian_unseeded = self.laplacian[self.K:, self.K:]
         self.b_transpose = self.laplacian[self.K:, :self.K]
 
     def solve_linear_systems(self):
-        print('Solving linear systems')
+        print('solving linear systems')
         unseeded_potentials_list = []
-        for seed_ind in range(self.K):
-            print(f'Solving system {seed_ind+1} / {self.K}')
+        for seed_index in range(self.K):
+            print(f'Solving system {seed_index+1} out of {self.K}')
             seeds_vector = [0] * self.K
-            seeds_vector[seed_ind] = 1
+            seeds_vector[seed_index] = 1
             unseeded_potentials = scipy.sparse.linalg.spsolve(
                 self.laplacian_unseeded, -self.b_transpose @ seeds_vector)
             unseeded_potentials_list.append(unseeded_potentials)
@@ -97,9 +97,9 @@ class Segmentation:
 
     def assign_max_likelihood(self, unseeded_potentials_list):
         print('Assigning maximum likelihood seed')
-        for pixel_ind in range(self.K, self.pixel_number):
-            pixel_coords = self.ordered_nodes[pixel_ind]
-            pixel_probabilities = [potentials[pixel_ind - self.K]
+        for pixel_index in range(self.K, self.pixel_number):
+            pixel_coords = self.ordered_nodes[pixel_index]
+            pixel_probabilities = [potentials[pixel_index - self.K]
                                    for potentials in unseeded_potentials_list]
             argmax_seed_index = np.argmax(pixel_probabilities)
             argmax_seed_coords = list(self.seeds_dic.keys())[argmax_seed_index]
@@ -125,7 +125,7 @@ class Segmentation:
         self.segmentation_image = image
         return image
 
-    def draw_cont(self):
+    def draw_contours(self):
         contours_array = np.zeros((self.ny, self.nx, 4))
         for y, x in itertools.product(range(self.ny), range(self.nx)):
             colour = self.pixel_colour_dic[(x, y)]
@@ -140,7 +140,7 @@ class Segmentation:
     def plot_contours(self):
         if not self.solved:
             raise Exception('Impossible to plot segmentation before solving')
-        self.draw_cont()
+        self.draw_contours()
         plt.imshow(self.image_array, cmap='gray')
         plt.imshow(self.contours_array)
         plt.title(r'$\beta=$'+str(round(self.beta, 3)))
@@ -173,7 +173,7 @@ class Segmentation:
         plt.savefig(output_path)
 
     def contours_to_png(self, path=None):
-        self.draw_cont()
+        self.draw_contours()
         output_path = self.output_path
         if path:
             output_path = path
@@ -197,7 +197,7 @@ class Segmentation:
             print(f'plotting seed {seed}')
             plt.plot(
                 *seed, color=self.seeds_dic[seed], marker='o', markeredgecolor='yellow')
-        print(f'Saving seeded image to {output_path}')
+        print(f'Saving seeds image to {output_path}')
         plt.savefig(output_path)
 
     # Ground of truth and error
